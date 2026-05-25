@@ -14,7 +14,7 @@ from PIL import (
     ImageEnhance
 )
 
-from py_yt import VideosSearch
+from youtubesearchpython.__future__ import VideosSearch
 
 # =====================================
 # CACHE
@@ -24,23 +24,38 @@ CACHE_DIR = Path("cache")
 CACHE_DIR.mkdir(exist_ok=True)
 
 # =====================================
-# 4K SIZE
+# CANVAS SIZE
 # =====================================
 
 CANVAS_W = 3840
 CANVAS_H = 2160
 
 # =====================================
-# FONTS
+# FONT PATHS
 # =====================================
 
-FONT_BOLD = "ShrutiMusic/assets/font3.ttf"
-FONT_REGULAR = "ShrutiMusic/assets/font2.ttf"
+FONT_BOLD = "Ayush/assets/font3.ttf"
+FONT_REGULAR = "Ayush/assets/font2.ttf"
 
-BOT_NAME = "KATIL MUSIC"
+BOT_NAME = "CUTIE MUSIC"
 
 # =====================================
-# THUMB GENERATOR
+# SAFE FONT LOADER
+# =====================================
+
+def load_font(path, size):
+
+    try:
+        if os.path.exists(path):
+            return ImageFont.truetype(path, size)
+
+    except Exception:
+        pass
+
+    return ImageFont.load_default()
+
+# =====================================
+# THUMBNAIL GENERATOR
 # =====================================
 
 async def get_thumb(videoid: str):
@@ -48,19 +63,21 @@ async def get_thumb(videoid: str):
     try:
 
         # =====================================
-        # FETCH YOUTUBE DATA
+        # GET VIDEO DATA
         # =====================================
 
         url = f"https://www.youtube.com/watch?v={videoid}"
 
-        results = VideosSearch(url, limit=1)
+        search = VideosSearch(url, limit=1)
 
-        result = (await results.next())["result"][0]
+        data = await search.next()
 
-        duration = result.get(
-            "duration",
-            "3:20"
-        )
+        if not data.get("result"):
+            return None
+
+        result = data["result"][0]
+
+        duration = result.get("duration", "3:20")
 
         thumburl = result["thumbnails"][0]["url"].split("?")[0]
 
@@ -74,40 +91,29 @@ async def get_thumb(videoid: str):
 
             async with session.get(thumburl) as resp:
 
-                if resp.status == 200:
+                if resp.status != 200:
+                    return None
 
-                    async with aiofiles.open(
-                        thumb_path,
-                        "wb"
-                    ) as f:
-
-                        await f.write(
-                            await resp.read()
-                        )
+                async with aiofiles.open(thumb_path, "wb") as f:
+                    await f.write(await resp.read())
 
         # =====================================
         # OPEN IMAGE
         # =====================================
 
-        base = Image.open(
-            thumb_path
-        ).convert("RGB")
+        base = Image.open(thumb_path).convert("RGB")
 
         # =====================================
         # BACKGROUND
         # =====================================
 
-        bg = base.resize(
-            (CANVAS_W, CANVAS_H)
-        )
+        bg = base.resize((CANVAS_W, CANVAS_H))
 
         bg = bg.filter(
             ImageFilter.GaussianBlur(40)
         )
 
-        bg = ImageEnhance.Brightness(
-            bg
-        ).enhance(0.18)
+        bg = ImageEnhance.Brightness(bg).enhance(0.18)
 
         canvas = bg.convert("RGBA")
 
@@ -151,7 +157,7 @@ async def get_thumb(videoid: str):
         )
 
         # =====================================
-        # THUMB IMAGE
+        # MAIN THUMB
         # =====================================
 
         thumb = base.resize((1900, 980))
@@ -192,24 +198,20 @@ async def get_thumb(videoid: str):
         )
 
         # =====================================
-        # CORNERS
+        # CORNER LINES
         # =====================================
 
         c = (255, 255, 255)
 
-        # TOP LEFT
         draw.line([(180, 100), (300, 100)], fill=c, width=8)
         draw.line([(180, 100), (180, 220)], fill=c, width=8)
 
-        # TOP RIGHT
         draw.line([(3660, 100), (3540, 100)], fill=c, width=8)
         draw.line([(3660, 100), (3660, 220)], fill=c, width=8)
 
-        # BOTTOM LEFT
         draw.line([(180, 1280), (300, 1280)], fill=c, width=8)
         draw.line([(180, 1280), (180, 1160)], fill=c, width=8)
 
-        # BOTTOM RIGHT
         draw.line([(3660, 1280), (3540, 1280)], fill=c, width=8)
         draw.line([(3660, 1280), (3660, 1160)], fill=c, width=8)
 
@@ -217,25 +219,15 @@ async def get_thumb(videoid: str):
         # FONTS
         # =====================================
 
-        medium_font = ImageFont.truetype(
-            FONT_BOLD,
-            85
-        )
-
-        small_font = ImageFont.truetype(
-            FONT_REGULAR,
-            58
-        )
+        medium_font = load_font(FONT_BOLD, 85)
+        small_font = load_font(FONT_REGULAR, 58)
 
         # =====================================
         # BOT NAME
         # =====================================
 
         draw.text(
-            (
-                2950,
-                1020
-            ),
+            (2950, 1020),
             BOT_NAME,
             font=medium_font,
             fill=(255, 0, 0)
@@ -289,7 +281,7 @@ async def get_thumb(videoid: str):
         )
 
         # =====================================
-        # TIME
+        # TIME TEXT
         # =====================================
 
         draw.text(
@@ -318,12 +310,12 @@ async def get_thumb(videoid: str):
         )
 
         # =====================================
-        # DELETE TEMP
+        # DELETE TEMP FILE
         # =====================================
 
         try:
             os.remove(thumb_path)
-        except:
+        except Exception:
             pass
 
         return str(output)
