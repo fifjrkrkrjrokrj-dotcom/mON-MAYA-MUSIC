@@ -1,150 +1,337 @@
 import os
-import re
-import random
-import aiofiles
 import aiohttp
+import aiofiles
+import traceback
+import random
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from pathlib import Path
+
+from PIL import (
+    Image,
+    ImageDraw,
+    ImageFilter,
+    ImageFont,
+    ImageEnhance
+)
+
 from py_yt import VideosSearch
-from config import YOUTUBE_IMG_URL
 
-from Ayush import app
+# =====================================
+# CACHE
+# =====================================
 
-# ================= UTILS =================
-def changeImageSize(maxWidth, maxHeight, image):
-    ratio = max(maxWidth / image.size[0], maxHeight / image.size[1])
-    return image.resize(
-        (int(image.size[0] * ratio), int(image.size[1] * ratio)),
-        Image.LANCZOS
-    )
+CACHE_DIR = Path("cache")
+CACHE_DIR.mkdir(exist_ok=True)
 
+# =====================================
+# 4K SIZE
+# =====================================
 
-def clean_title(text):
-    text = re.sub(r"\W+", " ", text)
-    return text.strip()[:50]
+CANVAS_W = 3840
+CANVAS_H = 2160
 
+# =====================================
+# FONTS
+# =====================================
 
-# ================= NEON COLORS =================
-NEON_COLORS = [
-    ("#ff004f", "#ff2f7d"),  # red
-    ("#ff00c8", "#ff4ddb"),  # pink
-    ("#00ff99", "#4dffc3"),  # green
-    ("#00aaff", "#4dc3ff"),  # blue
-    ("#ffd000", "#ffe066"),  # yellow
-]
+FONT_BOLD = "ShrutiMusic/assets/font3.ttf"
+FONT_REGULAR = "ShrutiMusic/assets/font2.ttf"
 
+BOT_NAME = "KATIL MUSIC"
 
-# ================= MAIN =================
-async def get_thumb(videoid):
-    if os.path.isfile(f"cache/{videoid}.png"):
-        return f"cache/{videoid}.png"
+# =====================================
+# THUMB GENERATOR
+# =====================================
+
+async def gen_thumb(videoid: str):
 
     try:
+
+        # =====================================
+        # FETCH YOUTUBE DATA
+        # =====================================
+
         url = f"https://www.youtube.com/watch?v={videoid}"
+
         results = VideosSearch(url, limit=1)
-        data = (await results.next())["result"][0]
 
-        title = clean_title(data["title"])
-        duration = data.get("duration", "0:00")
-        views = data.get("viewCount", {}).get("short", "Unknown")
-        thumb_url = data["thumbnails"][0]["url"].split("?")[0]
+        result = (await results.next())["result"][0]
 
-        # ---------- DOWNLOAD THUMB ----------
-        async with aiohttp.ClientSession() as s:
-            async with s.get(thumb_url) as r:
-                async with aiofiles.open("temp.png", "wb") as f:
-                    await f.write(await r.read())
-
-        yt = Image.open("temp.png").convert("RGBA")
-
-        # ---------- BACKGROUND ----------
-        bg = changeImageSize(1280, 720, yt)
-        bg = bg.filter(ImageFilter.GaussianBlur(22))
-        bg = ImageEnhance.Brightness(bg).enhance(0.40)
-
-        draw = ImageDraw.Draw(bg)
-
-        # ---------- RANDOM NEON ----------
-        glow_color, border_color = random.choice(NEON_COLORS)
-
-        # ---------- CENTER THUMB ----------
-        thumb_w, thumb_h = 840, 460
-        yt_thumb = yt.resize((thumb_w, thumb_h))
-
-        mask = Image.new("L", (thumb_w, thumb_h), 0)
-        ImageDraw.Draw(mask).rounded_rectangle(
-            (0, 0, thumb_w, thumb_h), radius=25, fill=255
+        duration = result.get(
+            "duration",
+            "3:20"
         )
-        yt_thumb.putalpha(mask)
 
-        x = (1280 - thumb_w) // 2
-        y = 160
+        thumburl = result["thumbnails"][0]["url"].split("?")[0]
 
-        # ---------- GLOW ----------
-        glow = Image.new("RGBA", bg.size, (0, 0, 0, 0))
-        gdraw = ImageDraw.Draw(glow)
+        # =====================================
+        # DOWNLOAD THUMB
+        # =====================================
 
-        gdraw.rounded_rectangle(
-            (x - 25, y - 25, x + thumb_w + 25, y + thumb_h + 25),
-            radius=35,
-            fill=glow_color,
+        thumb_path = CACHE_DIR / f"{videoid}.jpg"
+
+        async with aiohttp.ClientSession() as session:
+
+            async with session.get(thumburl) as resp:
+
+                if resp.status == 200:
+
+                    async with aiofiles.open(
+                        thumb_path,
+                        "wb"
+                    ) as f:
+
+                        await f.write(
+                            await resp.read()
+                        )
+
+        # =====================================
+        # OPEN IMAGE
+        # =====================================
+
+        base = Image.open(
+            thumb_path
+        ).convert("RGB")
+
+        # =====================================
+        # BACKGROUND
+        # =====================================
+
+        bg = base.resize(
+            (CANVAS_W, CANVAS_H)
         )
-        glow = glow.filter(ImageFilter.GaussianBlur(35))
-        bg.alpha_composite(glow)
 
-        # ---------- BORDER ----------
-        border = Image.new("RGBA", bg.size, (0, 0, 0, 0))
-        bdraw = ImageDraw.Draw(border)
-        bdraw.rounded_rectangle(
-            (x - 6, y - 6, x + thumb_w + 6, y + thumb_h + 6),
-            radius=30,
-            outline=border_color,
-            width=6,
+        bg = bg.filter(
+            ImageFilter.GaussianBlur(40)
         )
-        bg.alpha_composite(border)
 
-        bg.paste(yt_thumb, (x, y), yt_thumb)
+        bg = ImageEnhance.Brightness(
+            bg
+        ).enhance(0.18)
 
-        # ---------- FONTS ----------
-        title_font = ImageFont.truetype("Ayush/assets/font.ttf", 46)
-        info_font = ImageFont.truetype("Ayush/assets/font2.ttf", 30)
-        watermark_font = ImageFont.truetype("Ayush/assets/font2.ttf", 24)
+        canvas = bg.convert("RGBA")
 
-        # ---------- TITLE (TOP RIGHT) ----------
-        title_w = draw.textlength(title, font=title_font)
+        # =====================================
+        # RED OVERLAY
+        # =====================================
+
+        overlay = Image.new(
+            "RGBA",
+            (CANVAS_W, CANVAS_H),
+            (25, 0, 0, 180)
+        )
+
+        canvas = Image.alpha_composite(
+            canvas,
+            overlay
+        )
+
+        draw = ImageDraw.Draw(canvas)
+
+        # =====================================
+        # PLAYER BOX
+        # =====================================
+
+        box_x = 180
+        box_y = 100
+        box_w = 3480
+        box_h = 1180
+
+        draw.rounded_rectangle(
+            (
+                box_x,
+                box_y,
+                box_x + box_w,
+                box_y + box_h
+            ),
+            radius=20,
+            fill=(255, 255, 255, 55),
+            outline=(255, 255, 255),
+            width=6
+        )
+
+        # =====================================
+        # THUMB IMAGE
+        # =====================================
+
+        thumb = base.resize((1900, 980))
+
+        thumb_x = 970
+        thumb_y = 130
+
+        canvas.paste(
+            thumb,
+            (thumb_x, thumb_y)
+        )
+
+        # =====================================
+        # BLACK FADE
+        # =====================================
+
+        fade = Image.new(
+            "RGBA",
+            (box_w, 350),
+            (0, 0, 0, 0)
+        )
+
+        fd = ImageDraw.Draw(fade)
+
+        for y in range(350):
+
+            alpha = int((y / 350) * 255)
+
+            fd.line(
+                [(0, y), (box_w, y)],
+                fill=(0, 0, 0, alpha)
+            )
+
+        canvas.paste(
+            fade,
+            (box_x, box_y + 830),
+            fade
+        )
+
+        # =====================================
+        # CORNERS
+        # =====================================
+
+        c = (255, 255, 255)
+
+        # TOP LEFT
+        draw.line([(180, 100), (300, 100)], fill=c, width=8)
+        draw.line([(180, 100), (180, 220)], fill=c, width=8)
+
+        # TOP RIGHT
+        draw.line([(3660, 100), (3540, 100)], fill=c, width=8)
+        draw.line([(3660, 100), (3660, 220)], fill=c, width=8)
+
+        # BOTTOM LEFT
+        draw.line([(180, 1280), (300, 1280)], fill=c, width=8)
+        draw.line([(180, 1280), (180, 1160)], fill=c, width=8)
+
+        # BOTTOM RIGHT
+        draw.line([(3660, 1280), (3540, 1280)], fill=c, width=8)
+        draw.line([(3660, 1280), (3660, 1160)], fill=c, width=8)
+
+        # =====================================
+        # FONTS
+        # =====================================
+
+        medium_font = ImageFont.truetype(
+            FONT_BOLD,
+            85
+        )
+
+        small_font = ImageFont.truetype(
+            FONT_REGULAR,
+            58
+        )
+
+        # =====================================
+        # BOT NAME
+        # =====================================
+
         draw.text(
-            (1280 - title_w - 40, 40),
-            title,
-            font=title_font,
-            fill="white",
-            stroke_width=2,
-            stroke_fill=border_color,
+            (
+                2950,
+                1020
+            ),
+            BOT_NAME,
+            font=medium_font,
+            fill=(255, 0, 0)
         )
 
-        # ---------- BOTTOM INFO ----------
-        info_text = f"YouTube : {views} | Time : {duration} | Player : @Spotify_x_music_bot"
-        info_w = draw.textlength(info_text, font=info_font)
+        # =====================================
+        # WAVEFORM
+        # =====================================
+
+        wave_y = 1740
+
+        for x in range(300, 3400, 20):
+
+            h = random.randint(20, 120)
+
+            draw.line(
+                [
+                    (x, wave_y - h // 2),
+                    (x, wave_y + h // 2)
+                ],
+                fill=(255, 255, 255),
+                width=8
+            )
+
+        # =====================================
+        # PROGRESS BAR
+        # =====================================
+
+        line_y = 1890
+
+        draw.line(
+            [(300, line_y), (3450, line_y)],
+            fill=(140, 140, 140),
+            width=14
+        )
+
+        draw.line(
+            [(300, line_y), (1300, line_y)],
+            fill=(255, 255, 255),
+            width=16
+        )
+
+        draw.ellipse(
+            (
+                1270,
+                line_y - 24,
+                1320,
+                line_y + 24
+            ),
+            fill="white"
+        )
+
+        # =====================================
+        # TIME
+        # =====================================
 
         draw.text(
-            ((1280 - info_w) // 2, y + thumb_h + 40),
-            info_text,
-            font=info_font,
-            fill=border_color,
+            (300, 1940),
+            "00:00",
+            font=small_font,
+            fill="white"
         )
 
-        # ---------- WATERMARK ----------
         draw.text(
-            (30, 30),
-            "AYUSH MUSIC",
-            font=watermark_font,
-            fill=border_color,
+            (3250, 1940),
+            duration,
+            font=small_font,
+            fill="white"
         )
 
-        # ---------- SAVE ----------
-        bg.save(f"cache/{videoid}.png")
-        os.remove("temp.png")
-        return f"cache/{videoid}.png"
+        # =====================================
+        # SAVE
+        # =====================================
+
+        output = CACHE_DIR / f"{videoid}_final.png"
+
+        canvas.save(
+            output,
+            quality=100
+        )
+
+        # =====================================
+        # DELETE TEMP
+        # =====================================
+
+        try:
+            os.remove(thumb_path)
+        except:
+            pass
+
+        return str(output)
 
     except Exception as e:
-        print("Thumbnail error:", e)
-        return YOUTUBE_IMG_URL
+
+        print(f"[THUMB ERROR] {e}")
+
+        traceback.print_exc()
+
+        return None
