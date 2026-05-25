@@ -43,7 +43,7 @@ BOT_NAME = "KATIL MUSIC"
 # THUMB GENERATOR
 # =====================================
 
-async def gen_thumb(videoid: str):
+async def get_thumb(videoid: str):
 
     try:
 
