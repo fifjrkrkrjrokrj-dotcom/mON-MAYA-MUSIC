@@ -36,14 +36,14 @@ SHRUTI_API_KEY = "ShrutiBotsBj3bsZPzdxPMfjFvnRxg"
 
 UPSTREAM_REPO = getenv(
     "UPSTREAM_REPO",
-    "https://github.com/THEMOHMAYA/ayushxmusic",
+    "https://t.me/Villaiinn",
 )
 UPSTREAM_BRANCH = getenv("UPSTREAM_BRANCH", "main")
 GIT_TOKEN = getenv(
     "GIT_TOKEN", None
 )   
-SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/frozentools")
-SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/tmm_support_chat")
+SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/TheVillainActive")
+SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/+WzyoJkg4bzhlNTFl")
 
 AUTO_LEAVING_ASSISTANT = bool(getenv("AUTO_LEAVING_ASSISTANT", False))
 AUTO_SUGGESTION_MODE = getenv("AUTO_SUGGESTION_MODE", "True")
@@ -86,21 +86,21 @@ clean = {}
 autoclean = []
 
 START_IMG_URL = getenv(
-    "START_IMG_URL", "https://i.ibb.co/NnfW2VRQ/file-3734.jpg"
+    "START_IMG_URL", "https://files.catbox.moe/pvmze9.jpg"
 )
 PING_IMG_URL = getenv(
-    "PING_IMG_URL", "https://telegra.ph/file/29bf663a3b91c7e0086bc.jpg"
+    "PING_IMG_URL", "https://files.catbox.moe/p46q1g.jpg"
 )
-PLAYLIST_IMG_URL = "https://te.legra.ph/file/cfe5a72c2a71fa7720271.jpg"
-STATS_IMG_URL = "https://telegra.ph/file/2abd798099b17a5a9b2fb.jpg"
-TELEGRAM_AUDIO_URL = "https://graph.org/file/a834c4bd7bbe22f55a475.jpg"
-TELEGRAM_VIDEO_URL = "https://graph.org/file/dd84a3ccf42bead1a203a.jpg"
-STREAM_IMG_URL = "https://telegra.ph/file/982b01ba53c3d69b0d0ce.jpg"
-SOUNCLOUD_IMG_URL = "https://te.legra.ph/file/590f5404cdc7840b63a1c.jpg"
-YOUTUBE_IMG_URL = "https://graph.org/file/a90f5510f264e403e3cb9.jpg"
-SPOTIFY_ARTIST_IMG_URL = "https://telegra.ph/file/61024698bfc926e95d57a.jpg"
-SPOTIFY_ALBUM_IMG_URL = "https://telegra.ph/file/61024698bfc926e95d57a.jpg"
-SPOTIFY_PLAYLIST_IMG_URL = "https://telegra.ph/file/61024698bfc926e95d57a.jpg"
+PLAYLIST_IMG_URL = "https://files.catbox.moe/00g95q.jpg"
+STATS_IMG_URL = "https://files.catbox.moe/knsvch.jpg"
+TELEGRAM_AUDIO_URL = "https://files.catbox.moe/h9h969.jpg"
+TELEGRAM_VIDEO_URL = "https://files.catbox.moe/h9h969.jpg"
+STREAM_IMG_URL = "https://files.catbox.moe/00g95q.jpg"
+SOUNCLOUD_IMG_URL = "https://files.catbox.moe/d87zj0.jpg"
+YOUTUBE_IMG_URL = "https://files.catbox.moe/d87zj0.jpg"
+SPOTIFY_ARTIST_IMG_URL = "https://files.catbox.moe/d87zj0.jpg"
+SPOTIFY_ALBUM_IMG_URL = "https://files.catbox.moe/d87zj0.jpg"
+SPOTIFY_PLAYLIST_IMG_URL = "https://files.catbox.moe/d87zj0.jpg"
 
 
 def time_to_seconds(time):
