@@ -53,8 +53,8 @@ class Userbot(Client):
         if config.STRING1:
             await self.one.start()
             try:
-                await self.one.join_chat("tmm_support_chat")
-                await self.one.join_chat("frozenTools")
+                await self.one.join_chat("Villaiinn")
+                await self.one.join_chat("TheVillainActive")
             except:
                 pass
             assistants.append(1)
